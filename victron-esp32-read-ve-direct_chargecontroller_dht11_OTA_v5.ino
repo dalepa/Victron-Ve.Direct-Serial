@@ -6,9 +6,10 @@
         V5.1 20230116 - OTA
         V5.2 20230116 - Disconnect reason FIx
         V5.3 20230118 Added ERR
+        v5.5 debug
 */
 
-String Version = "BattMan OTA 5.3";                       // Version 
+String Version = "BattMan Charge Controller OTA 5.5.1";                       // Version 
 //String BoardId = "BattMan.victron.HQ2212CHJG2.shunt";     //ESP32 - Victron Shunt
 String BoardId = "BattMan.victron.HQ2212CHJG2";         //ESP32 - Victron MPPT 100/30 
 
@@ -57,6 +58,7 @@ IPAddress influxIP;
 WiFiUDP udp;
 
 
+unsigned long previousMillis = 0;
 
 int sampleCnt = 0;
 
@@ -219,6 +221,8 @@ void toInflux (String line)
 void tempToInflux()
 {
 
+
+
       //DHT11
       float temperature = dht.getTemperature()  * 1.8 + 32 ;
       float humidity = dht.getHumidity();
@@ -234,7 +238,7 @@ void tempToInflux()
 void processCC()
 {
 
-      tempToInflux();
+      // tempToInflux();
 
       int value = medianData(data, "V");      
       line = String(BoardId +".battery.voltage value=" + String(value/1000.0));
@@ -271,9 +275,27 @@ void processCC()
 
 }
 
+
+
+void ExecEvery(unsigned long seconds) {
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= seconds * 1000) {
+    // Execute the code that you want to run after the specified number of seconds
+    
+    wifiStatus();
+    tempToInflux();
+
+    // Update the previous time variable
+    previousMillis = currentMillis;
+  }
+}
+
+
 void processShunt()
 {
   
+ 
       int value = medianData(data, "V");      
       String line = String(BoardId +".battery.voltage value=" + String(value/1000.0));
       toInflux(line);
@@ -374,6 +396,8 @@ void processShunt()
       value = medianData(data, "H18");
       line = String(BoardId +".H18 value=" + String(value));
       toInflux(line);
+
+      
 }
 
 void loop() {
@@ -387,10 +411,14 @@ void loop() {
   // Print the line to the serial monitor
   // Serial.println(inputString);
 
-  int spaceIndex = inputString.indexOf('\t');
+    int spaceIndex = inputString.indexOf('\t');
 
-  String key = inputString.substring(0, spaceIndex);
-  String svalue = inputString.substring(spaceIndex + 1);
+    String key = inputString.substring(0, spaceIndex);
+    String svalue = inputString.substring(spaceIndex + 1);
+
+
+    ExecEvery(1);
+
 
 
     if (key == "Checksum")
@@ -406,15 +434,10 @@ void loop() {
     }
     else
     {
-      wifiStatus();
-      if (BoardId == "BattMan.victron.HQ2212CHJG2")
-      {
-        processCC();
-      }
-      else
-      {
-        processShunt();
-      }
+      // wifiStatus();
+
+      processCC();
+
       sampleCnt=0;
     }      
 
