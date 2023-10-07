@@ -5,9 +5,10 @@
         V5.1 20230116 - OTA
         V5.2 20230116 - Disconnect reason FIx
         V5.3 20230118 Added ERR
+        V5.5.1 Added every
 */
 
-String Version = "BattMan OTA 5.3";                       // Version 
+String Version = "BattMan Shunt OTA 5.5.1.1";                       // Version 
 String BoardId = "BattMan.victron.HQ2212CHJG2.shunt";     //ESP32 - Victron Shunt
 //String BoardId = "BattMan.victron.HQ2212CHJG2";         //ESP32 - Victron MPPT 100/30 
 
@@ -56,6 +57,7 @@ IPAddress influxIP;
 WiFiUDP udp;
 
 
+unsigned long previousMillis = 0;
 
 int sampleCnt = 0;
 
@@ -230,6 +232,22 @@ void tempToInflux()
 
 }
 
+
+
+void ExecEvery(unsigned long seconds) {
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= seconds * 1000) {
+    // Execute the code that you want to run after the specified number of seconds
+    
+    wifiStatus();
+
+    // Update the previous time variable
+    previousMillis = currentMillis;
+  }
+}
+
+
 void processCC()
 {
 
@@ -382,14 +400,18 @@ void loop() {
   webserver.handleClient();
 
 
+
   String inputString = serialVE.readStringUntil('\n');
   // Print the line to the serial monitor
   // Serial.println(inputString);
 
-  int spaceIndex = inputString.indexOf('\t');
+    int spaceIndex = inputString.indexOf('\t');
 
-  String key = inputString.substring(0, spaceIndex);
-  String svalue = inputString.substring(spaceIndex + 1);
+    String key = inputString.substring(0, spaceIndex);
+    String svalue = inputString.substring(spaceIndex + 1);
+
+
+    ExecEvery(1);
 
 
     if (key == "Checksum")
@@ -405,15 +427,9 @@ void loop() {
     }
     else
     {
-      wifiStatus();
-      if (BoardId == "BattMan.victron.HQ2212CHJG2")
-      {
-        processCC();
-      }
-      else
-      {
-        processShunt();
-      }
+
+      processShunt();
+      
       sampleCnt=0;
     }      
 
